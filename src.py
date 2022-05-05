@@ -36,7 +36,7 @@ def simulate_data(ground_truth, stimulus, stimulus_duration, sampling_frequency)
     return data, W
 
 
-def load_GT()
+def load_GT():
     ground_truth = dict()
 
     img = nib.load('sample_data/lh.prfangle.mgz')
