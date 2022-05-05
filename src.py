@@ -1,15 +1,15 @@
 import numpy as np
 import nibabel as nib
 from scipy.fft import fft, ifft
+from scipy.signal import detrend, filtfilt, butter
 from cni_tlbx.gadgets import two_gamma, gaussian
 
 
 class data_handler:
     def __init__(self):
+        pass
 
-
-    @staticmethod
-    def simulate_data(ground_truth, stimulus, stimulus_duration, sampling_frequency):
+    def simulate_data(self, ground_truth, stimulus, stimulus_duration, sampling_frequency):
         good_voxels = sum(ground_truth['mask'])
         total_voxels = len(ground_truth['mask'])
         resolution, _, timepoints = stimulus.shape
@@ -38,39 +38,35 @@ class data_handler:
         data = np.zeros((timepoints, total_voxels))
         data[:, ground_truth['mask']] = np.real(ifft(tc_fft *
                                                 np.expand_dims(hrf_fft,
-                                                axis=1), axis=0))[:timepoints
+                                                axis=1), axis=0))[:timepoints]
 
-        noise = self._sim_noise(data, total_voxels, stimulus_duration, timepoints, sampling_frequency)
+        noise = self._sim_noise(data, total_voxels, stimulus_duration, timepoints)
         data = data + noise
 
         return data, W
 
-    @staticmethod
-    def _sim_noise(data, num_voxels, stimulus_duration, timepoints, sampling_frequency):
+    def preprocess(self, data, sampling_frequency):
+        b, a = butter(2, 0.005,'hp', fs = sampling_frequency)
+        return filtfilt(b, a, data, axis=0)
 
-        time_vector = np.linspace(0,stimulus_duration, timepoints)
+    def _sim_noise(self, data, num_voxels, stimulus_duration, timepoints):
+
+        time_vector = np.linspace(0, stimulus_duration, timepoints)
 
         variance = np.var(data, axis=0)
         peak = np.sqrt(2 * variance)
-        mu = variance * np.sign(np.random.randn(num_voxels))
-        tau = time_vector[-1] / np.log(np.abs(mu))
-        breathing = 0.25 * peak * \
+        beta = np.max(data,axis=0) / timepoints
+        breathing = 0.5 * peak * \
                     np.cos(np.pi * 2 * np.expand_dims(time_vector, axis=1) *
                     0.3 + np.random.random(num_voxels) * np.pi)
-        heart_beat = 0.25 * peak * \
+        heart_beat = 0.5 * peak * \
                     np.cos(np.pi * 2 * np.expand_dims(time_vector, axis=1) *
                     1 + np.random.random(num_voxels) * np.pi)
 
-        dt = 1e-2
-        dsig = np.sqrt(dt / tau) * 0.1 * m
-        timepoints_hr = (int(stimulus_duration / dt)
-        sampling_rate = int(1 / sampling_frequency / dt)
-        drift = np.zeros(timepoints_hr, num_voxels))
-        for t in range(1, timepoints_hr):
-            drift[t] = drift[t-1] + dt * (mu - drift[t-1])/tau +\
-                        dsig * np.random.randn(num_voxels)
+        drift = np.expand_dims(time_vector, axis=1) * beta * \
+                np.sign(np.random.randn(num_voxels))
 
-        noise = breathing + heart_beat + drift[::sampling_rate]
+        noise = breathing + heart_beat + drift
         return noise
 
 
