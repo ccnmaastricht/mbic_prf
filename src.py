@@ -1,4 +1,5 @@
 import numpy as np
+import nibabel as nib
 from scipy.fft import fft, ifft
 from cni_tlbx.gadgets import two_gamma, gaussian
 
