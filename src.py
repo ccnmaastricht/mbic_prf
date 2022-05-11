@@ -111,7 +111,7 @@ def create_ring(direction, duty_cycle, temporal_frequency,
   return stimulus
 
 
-def create_bar(duty_cycle, time_steps, resolution=100):
+def create_bar(duty_cycle, time_steps, mean_luminance, resolution=100):
   def define_bar(x, y, width, height, angle):
     img = Image.fromarray(np.zeros((resolution,
                                     resolution)))
@@ -168,8 +168,14 @@ def create_bar(duty_cycle, time_steps, resolution=100):
       new_coords = [rotate_coords(coord, angle)
                     for coord in coords]
 
-      for x, y in new_coords:
-        bar = define_bar(x, y, width, 150, angle)
+      rand_pos = np.random.randint(len(new_coords))
+    
+      for idx, (x, y) in enumerate(new_coords):
+        if (idx == rand_pos) & mean_luminance:
+          bar = np.zeros((resolution, resolution))
+        else:
+          bar = define_bar(x, y, width, 150, angle)
+            
         bars.append(bar * (radius <= 1))
 
   stimulus = np.stack(bars, -1)
