@@ -184,3 +184,36 @@ def create_bar(duty_cycle, time_steps, mean_luminance, positions, resolution=100
   stimulus = np.stack(bars, -1)
 
   return stimulus
+
+
+def preprocess_img(input_img):
+    transform = transforms.Compose([transforms.ToTensor(),
+                                    transforms.Resize(112),
+                                    transforms.Normalize(mean=[0.485, 0.456, 0.406],
+                                                         std=[0.229, 0.224, 0.225])])
+    input_tensor = transform(input_img)
+    input_batch = input_tensor.unsqueeze(0)
+
+    if torch.cuda.is_available():
+        input_batch = input_batch.cuda()
+
+    return input_batch
+
+
+def get_layer_hook(name, out_dict):
+    def hook(model, input, output):
+        out_dict[name] = output.detach()
+    
+    return hook
+
+
+def to_torch(X):
+    if torch.cuda.is_available():
+        device = "cuda"
+    else:
+        device = "cpu"
+
+    X = torch.from_numpy(X)
+    X = X.float().to(device)
+
+    return X
